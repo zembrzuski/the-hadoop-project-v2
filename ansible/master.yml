@@ -1,0 +1,309 @@
+# referencia: http://backtobazics.com/big-data/setup-multi-node-hadoop-2-6-0-cluster-with-yarn/
+#
+# devo rodar o seguinte comando
+# ansible-playbook -i inventory master.yml
+#
+- name: Provision master
+  hosts: hadoop_master
+  remote_user: vagrant
+  become: yes
+  become_method: sudo
+  gather_facts: no
+
+  vars:
+    hadoop_folder: /opt/hadoop
+    default_folder: /home/hduser
+    hadoop_with_version: hadoop-2.8.1
+    hadoop_folder_final: "{{ hadoop_folder }}/{{ hadoop_with_version }}"
+    hadoop_conf_dir: "{{ hadoop_folder_final }}/etc/hadoop"
+    java_home: /usr/java/jdk1.8.0_144
+    mapred_site_props: <?xml version="1.0"?><?xml-stylesheet type="text/xsl" href="configuration.xsl"?><configuration><property><name>mapreduce.framework.name</name><value>yarn</value></property></configuration>
+
+  tasks:
+  - name: checa se o ipv6 esta disabled.
+    shell: cat /proc/sys/net/ipv6/conf/all/disable_ipv6
+    register: ipv6_is_disabled
+
+  - name: disabling ipv6
+    blockinfile:
+      dest: /etc/sysctl.conf
+      content: |
+        net.ipv6.conf.all.disable_ipv6 = 1
+        net.ipv6.conf.default.disable_ipv6 = 1
+        net.ipv6.conf.lo.disable_ipv6 = 1
+    when: ipv6_is_disabled.stdout.find('0') != -1
+
+  - name: se esta habilitado o ipv6, reboota
+    shell: reboot
+    async: 0
+    poll: 0
+    when: ipv6_is_disabled.stdout.find('0') != -1
+
+  # ATENCAO
+  # Isso aqui, na pratica, nao funciona. O que está acontecendo é que depois 
+  # de 60s dá timeout e ele reconecta.
+  # O ideal eh reiniciar o servico de rede sem reiniciar a maquina.
+  # talvez esse comando resolva
+  # sudo ifdown eth0 && sudo ifup eth0
+  - name: Waiting for reboot
+    sudo: no
+    local_action: wait_for host=hadoop_master state=started delay=10 timeout=60
+    when: ipv6_is_disabled.stdout.find('0') != -1
+
+  - name: Installing vim
+    yum:
+      name: vim
+      state: present
+
+  - name: setting hosts -- master
+    lineinfile: 
+      dest: '/etc/hosts'
+      line: "{{ hostvars[item]['inventory_hostname'] }}      {{ hostvars[item]['name'] }}"
+    with_items: "{{ groups['hadoop_master'] }}"
+
+  - name: setting hosts -- slaves
+    lineinfile: 
+      dest: '/etc/hosts'
+      line: "{{ hostvars[item]['inventory_hostname'] }}      {{ hostvars[item]['name'] }}"
+    with_items: "{{ groups['hadoop_workers'] }}"
+
+  - name: "Uploading jdk8"
+    copy:
+      src: /home/nozes/labs/the-hadoop-project/downloads/jdk-8u144-linux-x64.rpm
+      dest: /usr/local/src/jdk-8u144-linux-x64.rpm
+
+  - name: Install the JDK via yum
+    yum:
+      name: /usr/local/src/jdk-8u144-linux-x64.rpm
+      state: present
+
+  - name: addgroup hadoop
+    group:
+      name: hadoop
+      state: present    
+
+  - name: addgroup hadoop
+    group:
+      name: hadoop
+      state: present    
+
+  - name: Adding user hduser
+    user: 
+      name: hduser
+      password: $6$i1X5M6lS$.sYSalRHezB6/HI.dcuK8of5dfwFaATO3wHMLMcy76yvAF1DUMHKxGSMa0PpNGYBxnTFJvzEG3CTyEhsk9qU5/
+      shell: /bin/bash
+      groups: hadoop
+      append: yes
+
+  # simplesmente estou criando o diretorio aqui.
+  - name: "creating .ssh directory"
+    file:
+      path: /home/hduser/.ssh
+      state: directory
+      owner: hduser
+      group: hduser
+      mode: 0700
+
+  # com a chave privada da minha maquina local na minha maquina remota, vou ser capaz de
+  # acessar todos os servidores que possuem a chave respectiva chave publica.
+  - name: "copyind id_rsa.pub from local machine to remote machine as authorized_keys"
+    copy:
+      src: /home/nozes/.ssh/
+      dest: /home/hduser/.ssh/  
+      owner: hduser
+      group: hduser
+      remote_src: no
+      mode: 0700
+
+  # com a chave publica no minha maquina remota, consigo acessar a partir da
+  # minha maquina fisica
+  - name: "copyind id_rsa.pub from local machine to remote machine as authorized_keys"
+    copy:
+      src: /home/nozes/.ssh/id_rsa.pub
+      dest: /home/hduser/.ssh/authorized_keys
+      owner: hduser
+      group: hduser
+      remote_src: no
+      mode: 0600
+
+  - name: "Uploading hadoop"
+    copy:
+      src: /home/nozes/labs/the-hadoop-project/downloads/hadoop-2.8.1.tar.gz
+      dest: "{{ default_folder }}/hadoop.tar.gz"
+      remote_src: no
+
+  - name: Create hadoop dir -- bad smell. acho que ele tá criando esse cara toda a vez.
+    file: 
+      path: "{{ hadoop_folder }}"
+      state: directory
+      owner: hduser
+      group: hadoop   
+      recurse: yes      
+      mode: "u+rw,g-wx,o-rwx"
+
+  - name: extracting hadoop 
+    unarchive:
+      src: "{{ default_folder }}/hadoop.tar.gz"
+      dest: "{{ hadoop_folder }}"
+      copy: no
+      creates: "{{ hadoop_folder_final }}"
+      group: hadoop
+      owner: hduser
+
+  - name: setting vars on /etc/profile
+    blockinfile:
+      dest: "/etc/profile"
+      content: |
+        export HADOOP_HOME={{ hadoop_folder_final }}
+        export HADOOP_INSTALL=$HADOOP_HOME
+        export HADOOP_MAPRED_HOME=$HADOOP_HOME
+        export HADOOP_COMMON_HOME=$HADOOP_HOME
+        export HADOOP_HDFS_HOME=$HADOOP_HOME
+        export YARN_HOME=$HADOOP_HOME
+        export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native
+        export PATH=$PATH:$HADOOP_HOME/sbin:$HADOOP_HOME/bin
+
+  - name: reloading conf
+    shell: "source /etc/profile"
+
+  - name: Create nn
+    file: 
+      path: /hadoop/nn 
+      state: directory
+      owner: hduser
+      group: hadoop   
+      mode: "u+rwx,g+rx,o-rwx"
+      recurse: yes      
+
+  - name: Create snn
+    file: 
+      path: /hadoop/snn 
+      state: directory
+      owner: hduser
+      group: hadoop   
+      mode: "u+rwx,g+rx,o-rwx"
+      recurse: yes      
+
+  - name: Create dn
+    file: 
+      path: /hadoop/dn 
+      state: directory
+      owner: hduser
+      group: hadoop   
+      mode: "u+rwx,g+rx,o-rwx"
+      recurse: yes      
+
+  - name: Create mapred/system
+    file: 
+      path: /hadoop/mapred/system 
+      state: directory
+      owner: hduser
+      group: hadoop   
+      mode: "u+rwx,g+rx,o-rwx"
+      recurse: yes      
+
+  - name: Create mapred/local
+    file: 
+      path: /hadoop/mapred/local
+      state: directory
+      owner: hduser
+      group: hadoop   
+      mode: "u+rwx,g+rx,o-rwx"
+      recurse: yes      
+
+  - name: checa se hadoop_home is setted
+    shell: "echo $HADOOP_HOME"
+    register: hadoop_home
+  
+  - name: setting hadoop-env.sh
+    lineinfile: dest="{{ hadoop_conf_dir }}/hadoop-env.sh"
+                line="export JAVA_HOME=${JAVA_HOME}"
+                state=absent
+
+  - name: setting hadoop-env.sh
+    lineinfile: dest="{{ hadoop_conf_dir }}/hadoop-env.sh"
+                line="export JAVA_HOME={{ java_home }}"
+                state=present
+
+  - name: Updating hdfs-site.xml
+    blockinfile:
+      dest: "{{ hadoop_conf_dir }}/hdfs-site.xml"
+      content: |
+        <property>
+            <name>dfs.replication</name>
+            <value>1</value>
+        </property>
+        <property>
+            <name>dfs.name.dir</name>
+            <value>file:///hadoop/nn</value>
+        </property>
+        <property>
+            <name>dfs.data.dir</name>
+            <value>file:///hadoop/dn</value>
+        </property>
+        <property>
+            <name>dfs.namenode.checkpoint.dir</name>
+            <value>file:///hadoop/snn</value>
+        </property>
+      insertbefore: "</configuration>"
+
+
+  - name: Updating core-site.xml
+    blockinfile:
+      dest: "{{ hadoop_conf_dir }}/core-site.xml"
+      content: |
+        <property>
+          <name>fs.default.name</name>
+          <value>hdfs://master:9000</value>
+          <description>The name of the default file system.  A URI whose scheme and authority determine the FileSystem implementation.  The uri's scheme determines the config property (fs.SCHEME.impl) naming the FileSystem implementation class.  The uri's authority is used to determine the host, port, etc. for a filesystem.</description>
+        </property>
+      insertbefore: "</configuration>"
+
+  - name: creating mapred-site.xml
+    copy:
+      content: ""
+      dest: "{{ hadoop_conf_dir }}/mapred-site.xml"
+      force: no
+
+  - name: Updating mapred-site.xml
+    lineinfile: dest="{{ hadoop_conf_dir }}/mapred-site.xml"
+                line="{{ mapred_site_props }}"
+                state=present
+
+  - name: Updating yarn-site.xml
+    blockinfile:
+      dest: "{{ hadoop_conf_dir }}/yarn-site.xml"
+      content: |
+        <property>
+            <name>yarn.resourcemanager.hostname</name>
+            <value>master</value>
+        </property>
+        <property>
+            <name>yarn.nodemanager.aux-services</name>
+            <value>mapreduce_shuffle</value>
+        </property>
+        <property>
+            <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+            <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+        </property>
+      insertbefore: "</configuration>"
+
+  - name: Updating conf/slaves
+    lineinfile: 
+      dest: "{{ hadoop_conf_dir }}/slaves"
+      line: "localhost"
+      state: absent
+
+  # isso aqui de baixo eh somente se tu quiser
+  # que o master tb seja worker
+  - name: Updating conf/slaves
+    lineinfile: 
+      dest: "{{ hadoop_conf_dir }}/slaves"
+      line: "{{ hostvars[item]['name'] }}"
+    with_items: "{{ groups['hadoop_master'] }}"
+
+  - name: Updating conf/slaves
+    lineinfile: 
+      dest: "{{ hadoop_conf_dir }}/slaves"
+      line: "{{ hostvars[item]['name'] }}"
+    with_items: "{{ groups['hadoop_workers'] }}"
