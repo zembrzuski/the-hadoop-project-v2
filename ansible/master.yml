@@ -307,3 +307,114 @@
       dest: "{{ hadoop_conf_dir }}/slaves"
       line: "{{ hostvars[item]['name'] }}"
     with_items: "{{ groups['hadoop_workers'] }}"
+
+  - name: "Upload scala"
+    copy:
+      src: /home/nozes/labs/the-hadoop-project/downloads/scala-2.11.8.rpm
+      dest: /home/hduser/scala.rpm
+
+  - name: Install scala
+    yum:
+      name: "/home/hduser/scala.rpm"
+      state: present
+
+  - name: "Upload spark"
+    copy:
+      src: /home/nozes/labs/the-hadoop-project/downloads/spark-2.2.0-bin-hadoop2.7.tgz
+      dest: /home/hduser/spark.tgz
+
+  - name: "creating spark directory"
+    file:
+      path: /opt/spark
+      state: directory
+      owner: hduser
+      group: hduser
+      mode: 0700
+
+  - name: unarchiving spark
+    command: tar -C /opt/spark -zxvf /home/hduser/spark.tgz 
+
+  - name: setting env var | bashrc
+    lineinfile: 
+      dest: '/etc/profile'
+      line: "export SPARK_HOME=/opt/spark/spark-2.2.0-bin-hadoop2.7"
+
+  - name: reloading conf
+    shell: "source /etc/profile"
+
+  - name: "create spark-env.sh file"
+    copy:
+      src: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-env.sh.template
+      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-env.sh
+      owner: hduser
+      group: hduser
+      remote_src: yes
+      mode: 0700
+
+  - name: "setting spark-env.sh file"
+    blockinfile:
+      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-env.sh
+      content: |
+        SPARK_JAVA_OPTS=-Dspark.driver.port=53411
+        HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop/
+        SPARK_MASTER_IP=master
+
+  - name: "create spark-defaults.conf file"
+    copy:
+      src: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-defaults.conf.template
+      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-defaults.conf
+      owner: hduser
+      group: hduser
+      remote_src: yes
+      mode: 0700
+
+  - name: "setting spark-defaults.sh file"
+    blockinfile:
+      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-defaults.conf
+      content: |
+        spark.master            spark://master:7077
+        spark.serializer        org.apache.spark.serializer.KryoSerializer
+
+  - name: "creating spark logs directory"
+    file:
+      path: /opt/spark/spark-2.2.0-bin-hadoop2.7/logs
+      state: directory
+      owner: hduser
+      group: hduser
+      mode: 0700
+
+  - name: "creating spark work directory"
+    file:
+      path: /opt/spark/spark-2.2.0-bin-hadoop2.7/work
+      state: directory
+      owner: hduser
+      group: hduser
+      mode: 0700
+
+  - name: creating spark slaves file
+    copy:
+      content: ""
+      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/slaves
+      force: no
+      owner: hduser
+      group: hduser
+      mode: 0700
+
+  - name: Updating conf/slaves for spark
+    lineinfile: 
+      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/slaves
+      line: "localhost"
+      state: absent
+
+  # isso aqui de baixo eh somente se tu quiser que o master tb seja worker
+  - name: Updating conf/slaves for spark
+    lineinfile: 
+      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/slaves
+      line: "{{ hostvars[item]['name'] }}"
+    with_items: "{{ groups['hadoop_master'] }}"
+
+  - name: Updating conf/slaves for spark
+    lineinfile: 
+      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/slaves
+      line: "{{ hostvars[item]['name'] }}"
+    with_items: "{{ groups['hadoop_workers'] }}"

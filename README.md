@@ -2,6 +2,10 @@
 Como utilizar esse projeto
 --------------------------
 
+- Se voce quiser que o master NAO seja um worker, eh preciso remover
+  dos playbooks o comando que faz isso. Lembe que tem que fazer isso em
+  dois pontos: para o hadoop e para o spark.
+
 - Crie as maquinas virtuais. Para isso, pode-se utilizar o vagrant.
 
 - Sete os hosts no inventory.
@@ -39,7 +43,14 @@ Como utilizar esse projeto
   Data Node 1: http://192.168.0.43:50075/
   Data Node 2: http://192.168.0.44:50075/
 
+- Suba o spark:
+  sh $SPARK_HOME/sbin/start-all.sh
+
+- Suba o spark-shell
+    $SPARK_HOME/bin/spark-shell --master yarn-client
+
 - Dê um stop no cluster
+  sh $SPARK_HOME/sbin/stop-all.sh
   sh $HADOOP_HOME/sbin/stop-yarn.sh
   sh $HADOOP_HOME/sbin/stop-dfs.sh
   
