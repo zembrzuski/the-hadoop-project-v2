@@ -39,7 +39,7 @@
 
   - name: "Uploading jdk8"
     copy:
-      src: /home/nozes/labs/the-hadoop-project/downloads/jdk-8u144-linux-x64.rpm
+      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/jdk-8u144-linux-x64.rpm
       dest: /usr/local/src/jdk-8u144-linux-x64.rpm
 
   - name: Install the JDK via yum
@@ -78,7 +78,7 @@
   # acessar todos os servidores que possuem a chave respectiva chave publica.
   - name: "copyind id_rsa.pub from local machine to remote machine as authorized_keys"
     copy:
-      src: /home/nozes/.ssh/
+      src: /home/zembrzuski/.ssh/
       dest: /home/hduser/.ssh/  
       owner: hduser
       group: hduser
@@ -89,7 +89,7 @@
   # minha maquina fisica
   - name: "copyind id_rsa.pub from local machine to remote machine as authorized_keys"
     copy:
-      src: /home/nozes/.ssh/id_rsa.pub
+      src: /home/zembrzuski/.ssh/id_rsa.pub
       dest: /home/hduser/.ssh/authorized_keys
       owner: hduser
       group: hduser
@@ -98,7 +98,7 @@
 
   - name: "Uploading hadoop"
     copy:
-      src: /home/nozes/labs/the-hadoop-project/downloads/hadoop-2.8.1.tar.gz
+      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/hadoop-2.8.1.tar.gz
       dest: "{{ default_folder }}/hadoop.tar.gz"
       remote_src: no
 
@@ -256,6 +256,15 @@
             <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
             <value>org.apache.hadoop.mapred.ShuffleHandler</value>
         </property>
+        <property>
+            <name>yarn.nodemanager.pmem-check-enabled</name>
+            <value>false</value>
+        </property>
+
+        <property>
+            <name>yarn.nodemanager.vmem-check-enabled</name>
+            <value>false</value>
+        </property>        
       insertbefore: "</configuration>"
 
   - name: Updating conf/slaves
@@ -280,7 +289,7 @@
 
   - name: "Upload scala"
     copy:
-      src: /home/nozes/labs/the-hadoop-project/downloads/scala-2.11.8.rpm
+      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/scala-2.11.8.rpm
       dest: /home/hduser/scala.rpm
 
   - name: Install scala
@@ -290,7 +299,7 @@
 
   - name: "Upload spark"
     copy:
-      src: /home/nozes/labs/the-hadoop-project/downloads/spark-2.2.0-bin-hadoop2.7.tgz
+      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/spark-2.2.0-bin-hadoop2.7.tgz
       dest: /home/hduser/spark.tgz
 
   - name: "creating spark directory"
