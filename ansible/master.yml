@@ -1,11 +1,11 @@
 # referencia: http://backtobazics.com/big-data/setup-multi-node-hadoop-2-6-0-cluster-with-yarn/
 #
 # devo rodar o seguinte comando
-# ansible-playbook -i inventory master.yml
+# ansible-playbook -i inventory master.yml --extra-vars "ansible_sudo_pass=XXXXXX"
 #
 - name: Provision master
   hosts: hadoop_master
-  remote_user: vagrant
+  remote_user: rodrigo_zembrzuski
   become: yes
   become_method: sudo
   gather_facts: no
@@ -49,11 +49,6 @@
     sudo: no
     local_action: wait_for host=hadoop_master state=started delay=10 timeout=60
     when: ipv6_is_disabled.stdout.find('0') != -1
-
-  - name: Installing vim
-    yum:
-      name: vim
-      state: present
 
   - name: setting hosts -- master
     lineinfile: 
