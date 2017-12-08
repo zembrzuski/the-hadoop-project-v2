@@ -64,7 +64,7 @@
 
   - name: "Uploading jdk8"
     copy:
-      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/jdk-8u144-linux-x64.rpm
+      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/jdk-8u151-linux-x64.rpm
       dest: /usr/local/src/jdk-8u144-linux-x64.rpm
 
   - name: Install the JDK via yum
@@ -123,7 +123,7 @@
 
   - name: "Uploading hadoop"
     copy:
-      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/hadoop-2.8.1.tar.gz
+      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/hadoop-2.8.2.tar.gz
       dest: "{{ default_folder }}/hadoop.tar.gz"
       remote_src: no
 
@@ -314,7 +314,7 @@
 
   - name: "Upload scala"
     copy:
-      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/scala-2.11.8.rpm
+      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/scala-2.12.4.rpm
       dest: /home/hduser/scala.rpm
 
   - name: Install scala
@@ -324,7 +324,7 @@
 
   - name: "Upload spark"
     copy:
-      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/spark-2.2.0-bin-hadoop2.7.tgz
+      src: /home/zembrzuski/rbs/the-hadoop-project-v2/downloads/spark-2.2.1-bin-hadoop2.7.tgz
       dest: /home/hduser/spark.tgz
 
   - name: "creating spark directory"

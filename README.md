@@ -2,6 +2,11 @@
 Como utilizar esse projeto
 --------------------------
 
+- Do jeito que estao as coisas, eh necessario colocar a chave publica no 
+  servidor como 'authorized_keys'. Se tu não quiser fazer isso que,
+  de fato, eh ruim, tem que trocar o script par que o ansible acesse o 
+  servidor via ssh com senha
+
 - Se voce quiser que o master NAO seja um worker, eh preciso remover
   dos playbooks o comando que faz isso. Lembe que tem que fazer isso em
   dois pontos: para o hadoop e para o spark.
