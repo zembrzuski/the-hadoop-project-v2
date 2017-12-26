@@ -13,7 +13,7 @@
   vars:
     hadoop_folder: /opt/hadoop
     default_folder: /home/hduser
-    hadoop_with_version: hadoop-2.8.1
+    hadoop_with_version: hadoop-2.8.2
     hadoop_folder_final: "{{ hadoop_folder }}/{{ hadoop_with_version }}"
     hadoop_conf_dir: "{{ hadoop_folder_final }}/etc/hadoop"
     java_home: /usr/java/jdk1.8.0_144
@@ -341,15 +341,15 @@
   - name: setting env var | bashrc
     lineinfile: 
       dest: '/etc/profile'
-      line: "export SPARK_HOME=/opt/spark/spark-2.2.0-bin-hadoop2.7"
+      line: "export SPARK_HOME=/opt/spark/spark-2.2.1-bin-hadoop2.7"
 
   - name: reloading conf
     shell: "source /etc/profile"
 
   - name: "create spark-env.sh file"
     copy:
-      src: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-env.sh.template
-      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-env.sh
+      src: /opt/spark/spark-2.2.1-bin-hadoop2.7/conf/spark-env.sh.template
+      dest: /opt/spark/spark-2.2.1-bin-hadoop2.7/conf/spark-env.sh
       owner: hduser
       group: hduser
       remote_src: yes
@@ -357,7 +357,7 @@
 
   - name: "setting spark-env.sh file"
     blockinfile:
-      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-env.sh
+      dest: /opt/spark/spark-2.2.1-bin-hadoop2.7/conf/spark-env.sh
       content: |
         SPARK_JAVA_OPTS=-Dspark.driver.port=53411
         HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop/
@@ -365,8 +365,8 @@
 
   - name: "create spark-defaults.conf file"
     copy:
-      src: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-defaults.conf.template
-      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-defaults.conf
+      src: /opt/spark/spark-2.2.1-bin-hadoop2.7/conf/spark-defaults.conf.template
+      dest: /opt/spark/spark-2.2.1-bin-hadoop2.7/conf/spark-defaults.conf
       owner: hduser
       group: hduser
       remote_src: yes
@@ -374,14 +374,14 @@
 
   - name: "setting spark-defaults.sh file"
     blockinfile:
-      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/spark-defaults.conf
+      dest: /opt/spark/spark-2.2.1-bin-hadoop2.7/conf/spark-defaults.conf
       content: |
         spark.master            spark://master:7077
         spark.serializer        org.apache.spark.serializer.KryoSerializer
 
   - name: "creating spark logs directory"
     file:
-      path: /opt/spark/spark-2.2.0-bin-hadoop2.7/logs
+      path: /opt/spark/spark-2.2.1-bin-hadoop2.7/logs
       state: directory
       owner: hduser
       group: hduser
@@ -389,7 +389,7 @@
 
   - name: "creating spark work directory"
     file:
-      path: /opt/spark/spark-2.2.0-bin-hadoop2.7/work
+      path: /opt/spark/spark-2.2.1-bin-hadoop2.7/work
       state: directory
       owner: hduser
       group: hduser
@@ -398,7 +398,7 @@
   - name: creating spark slaves file
     copy:
       content: ""
-      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/slaves
+      dest: /opt/spark/spark-2.2.1-bin-hadoop2.7/conf/slaves
       force: no
       owner: hduser
       group: hduser
@@ -406,19 +406,19 @@
 
   - name: Updating conf/slaves for spark
     lineinfile: 
-      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/slaves
+      dest: /opt/spark/spark-2.2.1-bin-hadoop2.7/conf/slaves
       line: "localhost"
       state: absent
 
   # isso aqui de baixo eh somente se tu quiser que o master tb seja worker
   - name: Updating conf/slaves for spark
     lineinfile: 
-      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/slaves
+      dest: /opt/spark/spark-2.2.1-bin-hadoop2.7/conf/slaves
       line: "{{ hostvars[item]['name'] }}"
     with_items: "{{ groups['hadoop_master'] }}"
 
   - name: Updating conf/slaves for spark
     lineinfile: 
-      dest: /opt/spark/spark-2.2.0-bin-hadoop2.7/conf/slaves
+      dest: /opt/spark/spark-2.2.1-bin-hadoop2.7/conf/slaves
       line: "{{ hostvars[item]['name'] }}"
     with_items: "{{ groups['hadoop_workers'] }}"
